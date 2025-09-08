@@ -21,16 +21,32 @@ namespace IT.CraftOrders
         public CraftFactoryDbContext(DbContextOptions<CraftFactoryDbContext> options) : base(options)
         {
         }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             if (!optionsBuilder.IsConfigured)
             {
                 var config = new ConfigurationBuilder()
-                    .SetBasePath(AppContext.BaseDirectory)
+                    .SetBasePath(Directory.GetCurrentDirectory())
                     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                     .Build();
                 optionsBuilder.UseSqlServer(config.GetConnectionString("DefaultConnection"));
             }
+        }
+        protected override void OnModelCreating(ModelBuilder b)
+        {
+            b.Entity<Product>().HasIndex(x => x.Sku).IsUnique();
+            b.Entity<Customer>().HasIndex(x => x.Email).IsUnique();
+
+            b.Entity<OrderLine>()
+                .HasOne(ol => ol.Order)
+                .WithMany(o => o.OrderLines)
+                .HasForeignKey(ol => ol.OrderId);
+
+            b.Entity<OrderLine>()
+                .HasOne(ol => ol.Product)
+                .WithMany(p => p.OrderLines)
+                .HasForeignKey(ol => ol.ProductId);
         }
     }
 }
