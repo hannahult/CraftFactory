@@ -1,4 +1,6 @@
 ﻿using IT.CraftOrders.Data;
+using IT.CraftOrders.Services;
+using IT.CraftOrders.UI;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,6 +17,9 @@ namespace IT.CraftOrders
             {
                 var db = scope.ServiceProvider.GetRequiredService<CraftFactoryDbContext>();
                 await db.Database.MigrateAsync();
+
+                var app = scope.ServiceProvider.GetRequiredService<Menu>();
+                await app.RunAsync();
             }
         }
 
@@ -27,6 +32,9 @@ namespace IT.CraftOrders
              .ConfigureServices((context, services) =>
              {
                  services.AddDbContext<CraftFactoryDbContext>();
+                 services.AddScoped<ProductService>();
+                 services.AddScoped<OrderService>();
+                 services.AddScoped<Menu>();
              });
     }
 }
