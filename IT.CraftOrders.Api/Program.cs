@@ -1,5 +1,7 @@
 
+using IT.CraftOrders.Api.Dtos;
 using IT.CraftOrders.Data;
+using IT.CraftOrders.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace IT.CraftOrders.Api
