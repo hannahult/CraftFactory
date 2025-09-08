@@ -9,7 +9,7 @@ namespace IT.CraftOrders.Models
     public class Order
     {
         public Guid OrderId { get; set; }
-        int CustomerId { get; set; }
+        public int CustomerId { get; set; }
         public string Status { get; set; } = "New";
         public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
 

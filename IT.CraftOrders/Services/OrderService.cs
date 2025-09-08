@@ -29,5 +29,45 @@ namespace IT.CraftOrders.Services
         {
             return _db.Orders.OrderBy(o => o.CreatedUtc).ToListAsync();
         }
+
+        public async Task<Order> CreateAsync(int customerId, IEnumerable<(int productId, int qty)> lines)
+        {
+            var products = await _db.Products
+                .Where(p => lines.Select(l => l.productId).Contains(p.ProductId))
+                .ToListAsync();
+
+            var order = new Order
+            {
+                CustomerId = customerId,
+                Status = "New",
+                CreatedUtc = DateTime.UtcNow,
+                UpdatedUtc = DateTime.UtcNow
+            };
+
+            foreach (var (productId, qty) in lines)
+            {
+                var p = products.First(x => x.ProductId == productId);
+                order.OrderLines.Add(new OrderLine
+                {
+                    ProductId = p.ProductId,
+                    Sku = p.Sku,
+                    Quantity = qty,
+                    UnitPrice = p.Price
+                });
+            }
+
+            _db.Orders.Add(order);
+            await _db.SaveChangesAsync();
+            return order;
+        }
+
+        public async Task UpdateStatusAsync(Guid orderId, string status)
+        {
+            var o = await _db.Orders.FirstOrDefaultAsync(x => x.OrderId == orderId)
+                    ?? throw new InvalidOperationException("Order not found");
+            o.Status = status;
+            o.UpdatedUtc = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+        }
     }
 }
