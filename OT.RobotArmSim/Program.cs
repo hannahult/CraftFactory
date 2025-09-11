@@ -1,118 +1,71 @@
 ﻿using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
-using MQTTnet;
-using OT.RobotArmSim.Models;
+using EasyModbus;
+
 
 namespace OT.RobotArmSim
 {
     internal class Program
     {
+        private static bool orderReceived = false;
+        private static int currentOrderId = 0;
+        private static int currentQuantity = 0;
+
         static async Task Main(string[] args)
         {
-            var options = new MqttClientOptionsBuilder()
-                .WithTcpServer("test.mosquitto.org", 1883)
-                .WithCleanSession()
-                .Build();
+            Console.WriteLine("Simulated Robot Arm with Modbus support");
 
-            const string topicStart = "craft/ot/cmd/start";
-            const string topicStatus = "craft/ot/status";
-            const string topicAlarm = "craft/ot/alarm";
+            Thread modbusThread = new Thread(StartRobotArmServer);
+            modbusThread.IsBackground = true;
+            modbusThread.Start();
 
-            var minMs = 2000;
-            var maxMs = 5000;
-            var failChance = 0.15;
-
-            var mqttClientFactory = new MqttClientFactory();
-            using var mqtt = mqttClientFactory.CreateMqttClient();
-
-            mqtt.ApplicationMessageReceivedAsync += async e =>
+            while (true)
             {
-                try
+                if (orderReceived)
                 {
-                    if (e.ApplicationMessage.Topic != topicStart) return;
-
-                    var json = Helpers.Utf8(e.ApplicationMessage.Payload);
-                    Console.WriteLine($"[RX] {topicStart}: {json}");
-
-                    var cmd = Helpers.TryParseJson<StartCommand>(json);
-                    if (cmd is null)
-                    {
-                        Console.WriteLine("[ERR] Invalid start payload");
-                        return;
-                    }
-                    // Immediately publish Running
-                    await Helpers.PublishAsync(mqtt, topicStatus, new StatusMessage
-                    {
-                        OrderId = cmd.OrderId,
-                        State = "Running",
-                        Msg = $"Picking {cmd.Sku} x{cmd.Qty}…"
-                    });
-
-                    // Simulate work
-                    var delay = Random.Shared.Next(minMs, Math.Max(minMs + 1, maxMs));
-                    await Task.Delay(delay);
-
-                    // Randomly fail
-                    var failed = Random.Shared.NextDouble() < failChance;
-                    if (failed)
-                    {
-                        await Helpers.PublishAsync(mqtt, topicAlarm, new AlarmMessage
-                        {
-                            OrderId = cmd.OrderId,
-                            Code = "Jam",
-                            Severity = "High",
-                            Msg = "Feeder jam detected"
-                        });
-
-                        await Helpers.PublishAsync(mqtt, topicStatus, new StatusMessage
-                        {
-                            OrderId = cmd.OrderId,
-                            State = "Failed",
-                            Msg = "Production failed"
-                        });
-                    }
-                    else
-                    {
-                        await Helpers.PublishAsync(mqtt, topicStatus, new StatusMessage
-                        {
-                            OrderId = cmd.OrderId,
-                            State = "Completed",
-                            Msg = "Production completed"
-                        });
-                    }
+                    Console.WriteLine($" New order received! OrderId={currentOrderId}, Quantity={currentQuantity}");
+                    Console.WriteLine("...Executing order...");
+                    Thread.Sleep(3000); // Simulating Work
+                    Console.WriteLine("Order completed");
+                    orderReceived = false;
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[ERR] Processing message failed: {ex.Message}");
-                }
-            };
 
-            mqtt.ConnectedAsync += async _ =>
-            {
-                Console.WriteLine("MQTT Connected");
-                await mqtt.SubscribeAsync(topicStart);
-                Console.WriteLine($"MQTT Subscribed: {topicStart}");
-            };
-
-            mqtt.DisconnectedAsync += async _ =>
-            {
-                Console.WriteLine("MQTT Disconnected");
-
-                await Task.Delay(1000);
-                try { await mqtt.ConnectAsync(options, CancellationToken.None); }
-                catch { }
-            };
-
-            Console.WriteLine("MQTT Connecting…");
-            await mqtt.ConnectAsync(options, CancellationToken.None);
-            Console.WriteLine("Press any key to quit…");
-            Console.ReadKey();
-
-            try { await mqtt.DisconnectAsync(); } catch { }
-
+                Thread.Sleep(500);
+            }
         }
 
+        public static void StartRobotArmServer()
+        {
+            int port = 502; 
+            ModbusServer modbusServer = new ModbusServer();
+            modbusServer.Port = port;
+
+            modbusServer.CoilsChanged += (startAddress, numberOfCoils) =>
+            {
+                if (startAddress == 0 && modbusServer.coils[0]) // Coil 0 = Start
+                {
+                    currentOrderId = modbusServer.holdingRegisters[0];
+                    currentQuantity = modbusServer.holdingRegisters[1];
+                    orderReceived = true;
+
+                    // Auto-reset coil
+                    modbusServer.coils[0] = false;
+                }
+            };
+
+            try
+            {
+                Console.WriteLine($"Starting Robot Arm Server on port {port}...");
+                modbusServer.Listen();
+                Console.WriteLine("Server is running. Press any key to exit.");
+                Console.ReadKey();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+            }
+        }
 
     }
 }
