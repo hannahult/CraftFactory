@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IT.CraftOrders.Api", "IT.Cr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OT.RobotArmSim", "OT.RobotArmSim\OT.RobotArmSim.csproj", "{8277F02C-F63D-4E6D-97F6-525055CC5CB6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Integration.DataBridge", "Integration.DataBridge\Integration.DataBridge.csproj", "{64746836-E98A-3909-7514-5D76F548A203}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{8277F02C-F63D-4E6D-97F6-525055CC5CB6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8277F02C-F63D-4E6D-97F6-525055CC5CB6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8277F02C-F63D-4E6D-97F6-525055CC5CB6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{64746836-E98A-3909-7514-5D76F548A203}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{64746836-E98A-3909-7514-5D76F548A203}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{64746836-E98A-3909-7514-5D76F548A203}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{64746836-E98A-3909-7514-5D76F548A203}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

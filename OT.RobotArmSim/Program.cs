@@ -10,7 +10,6 @@ namespace OT.RobotArmSim
     {
         private static bool orderReceived = false;
         private static int currentOrderId = 0;
-        private static int currentQuantity = 0;
 
         static async Task Main(string[] args)
         {
@@ -24,7 +23,7 @@ namespace OT.RobotArmSim
             {
                 if (orderReceived)
                 {
-                    Console.WriteLine($" New order received! OrderId={currentOrderId}, Quantity={currentQuantity}");
+                    Console.WriteLine($" New order received! OrderId={currentOrderId}");
                     Console.WriteLine("...Executing order...");
                     Thread.Sleep(3000); // Simulating Work
                     Console.WriteLine("Order completed");
@@ -37,35 +36,88 @@ namespace OT.RobotArmSim
 
         public static void StartRobotArmServer()
         {
-            int port = 502; 
+            int port = 502;
+           
             ModbusServer modbusServer = new ModbusServer();
-            modbusServer.Port = port;
+            modbusServer.Port = port; 
 
-            modbusServer.CoilsChanged += (startAddress, numberOfCoils) =>
+            modbusServer.CoilsChanged += (int startAddress, int numberOfCoils) =>
             {
-                if (startAddress == 0 && modbusServer.coils[0]) // Coil 0 = Start
-                {
-                    currentOrderId = modbusServer.holdingRegisters[0];
-                    currentQuantity = modbusServer.holdingRegisters[1];
-                    orderReceived = true;
+                Console.WriteLine($"CoilsChanged event fired at {DateTime.Now}");
+                Console.WriteLine($"  Start Address: {startAddress}");
+                Console.WriteLine($"  Number of Coils: {numberOfCoils}");
 
-                    // Auto-reset coil
-                    modbusServer.coils[0] = false;
+                const int maxCoilAddress = 1999; 
+
+                for (int i = 0; i < numberOfCoils; i++)
+                {
+                    int address = startAddress + i;
+       
+                    if (address >= 0 && address <= maxCoilAddress) 
+                    {
+                        Console.WriteLine($"    Coil[{address}] changed to: {modbusServer.coils[address]}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"    Warning: Attempted to access Coil[{address}] which is out of bounds.");
+                    }
+                }
+
+                if (modbusServer.coils[1])
+                {
+                    currentOrderId = modbusServer.holdingRegisters[1];
+                    orderReceived = true;
+                    Task.Delay(100).ContinueWith(_ => modbusServer.coils[1] = false);
                 }
             };
 
+            modbusServer.HoldingRegistersChanged += (int startAddress, int numberOfRegisters) =>
+            {
+                Console.WriteLine($"HoldingRegistersChanged event fired at {DateTime.Now}");
+                Console.WriteLine($"  Start Address: {startAddress}");
+                Console.WriteLine($"  Number of Registers: {numberOfRegisters}");
+               
+
+                const int maxRegisterAddress = 1999; 
+
+                for (int i = 0; i < numberOfRegisters; i++)
+                {
+                    int address = startAddress + i;
+                    if (address >= 0 && address <= maxRegisterAddress) // Ensure we don't go out of bounds
+                    {
+                        Console.WriteLine($"    HoldingRegister[{address}] changed to: {modbusServer.holdingRegisters[address]}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"    Warning: Attempted to access HoldingRegister[{address}] which is out of bounds.");
+                    }
+                }
+            };
+
+            modbusServer.holdingRegisters[0] = 123;
+            modbusServer.holdingRegisters[1] = 456;
+
+            modbusServer.holdingRegisters[10] = 789; 
+
+            modbusServer.inputRegisters[0] = 999;
+            modbusServer.discreteInputs[0] = true;
+
             try
             {
-                Console.WriteLine($"Starting Robot Arm Server on port {port}...");
+                Console.WriteLine($"Starting EasyModbus TCP Slave on port {port}...");
                 modbusServer.Listen();
-                Console.WriteLine("Server is running. Press any key to exit.");
-                Console.ReadKey();
+
+                Console.WriteLine("EasyModbus TCP Slave started. Press any key to exit.");
+                Console.ReadKey(); 
+
+                Console.WriteLine("Stopping EasyModbus TCP Slave...");
+                Console.WriteLine("EasyModbus TCP Slave stopped.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: {ex.Message}");
+                Console.WriteLine($"An error occurred: {ex.Message}");
+                Console.WriteLine(ex.StackTrace);
             }
         }
-
     }
 }
