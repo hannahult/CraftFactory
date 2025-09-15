@@ -18,7 +18,6 @@ namespace Integration.DataBridge
         {
             var handler = new HttpClientHandler
             {
-  
                 ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
             };
             using var http = new HttpClient(handler) { BaseAddress = new Uri("https://localhost:7246") };
@@ -41,6 +40,12 @@ namespace Integration.DataBridge
                     foreach (var o in inprog)
                     {
                         await UpdateStatusAsync(http, o.OrderId, "New");
+
+                        try
+                        {
+                            await CreateIncidentAsync(http, o.OrderId, "REQUEUE_STALE", "Warning", "Order was InProgress too long and was re-queued to New.");
+                        }
+                        catch {  }
                     }
 
 
@@ -75,6 +80,13 @@ namespace Integration.DataBridge
                             Console.WriteLine($"Order ERROR: {exOrder.Message}");
            
                             try { await UpdateStatusAsync(http, order.OrderId, "Failed"); } catch { }
+
+                            try
+                            {
+                                await CreateIncidentAsync(http, order.OrderId, "MODBUS_SEND_FAIL", "Error", exOrder.Message);
+                            }
+                            catch {  }
+
                         }
                     }
                 }
@@ -89,9 +101,29 @@ namespace Integration.DataBridge
     
         private static async Task UpdateStatusAsync(HttpClient http, Guid orderId, string status)
         {
-            var req = new UpdateOrderStatusDto { Status = status };
-            var resp = await http.PutAsJsonAsync(string.Format("/api/v1/orders/{0}/status", orderId), req);
+            try
+            {
+                var req = new UpdateOrderStatusDto { Status = status };
+                var resp = await http.PutAsJsonAsync(string.Format("/api/v1/orders/{0}/status", orderId), req);
+                resp.EnsureSuccessStatusCode();
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    CreateIncidentAsync(http, orderId, "API_UPDATE_STATUS_FAIL", "Error", ex.Message).Wait();
+                }
+                catch { }
+                throw;
+            }
+        }
+
+        static async Task CreateIncidentAsync(HttpClient http, Guid? orderId, string code, string severity, string message)
+        {
+            var payload = new { OrderId = orderId, Code = code, Severity = severity, Message = message };
+            var resp = await http.PostAsJsonAsync("/api/v1/incidents", payload);
             resp.EnsureSuccessStatusCode();
         }
+
     }
 }
