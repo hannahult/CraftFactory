@@ -1,7 +1,8 @@
-﻿using System.Text;
-using System.Text.Json;
+﻿using EasyModbus;
 using Microsoft.Extensions.Configuration;
-using EasyModbus;
+using System.Net.Http.Json;
+using System.Text;
+using System.Text.Json;
 
 
 namespace OT.RobotArmSim
@@ -118,6 +119,18 @@ namespace OT.RobotArmSim
                 Console.WriteLine($"An error occurred: {ex.Message}");
                 Console.WriteLine(ex.StackTrace);
             }
+        }
+
+        static async Task CreateIncidentAsync(Guid? orderId, string code, string severity, string message)
+        {
+            using var http = new HttpClient(new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+            })
+            { BaseAddress = new Uri("https://localhost:7246") };
+
+            var payload = new { OrderId = orderId, Code = code, Severity = severity, Message = message };
+            await http.PostAsJsonAsync("/api/v1/incidents", payload);
         }
     }
 }
