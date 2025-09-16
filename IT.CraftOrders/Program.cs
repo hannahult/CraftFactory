@@ -17,6 +17,7 @@ namespace IT.CraftOrders
             {
                 var db = scope.ServiceProvider.GetRequiredService<CraftFactoryDbContext>();
                 await db.Database.MigrateAsync();
+                await db.InitializeDataAsync();
 
                 var app = scope.ServiceProvider.GetRequiredService<Menu>();
                 await app.RunAsync();
@@ -34,6 +35,8 @@ namespace IT.CraftOrders
                  services.AddDbContext<CraftFactoryDbContext>();
                  services.AddScoped<ProductService>();
                  services.AddScoped<OrderService>();
+                 services.AddScoped<AuthService>();
+                 services.AddScoped<IncidentService>();
                  services.AddScoped<Menu>();
              });
     }

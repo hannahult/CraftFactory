@@ -33,6 +33,43 @@ namespace IT.CraftOrders.Data
                 optionsBuilder.UseSqlServer(config.GetConnectionString("DefaultConnection"));
             }
         }
+        
+        public async Task InitializeDataAsync()
+        {
+            if (!Employees.Any())
+            {
+                var hash = BCrypt.Net.BCrypt.HashPassword("admin123");
+                Employees.Add(new Employee
+                {
+                    Email = "admin1@craftfactory.com",
+                    PasswordHash = hash,
+                    CreatedUtc = DateTime.UtcNow
+                });
+            }
+
+            if (!Customers.Any())
+            {
+                Customers.AddRange(
+                    new Customer { Email = "hanna@example.com", Name = "Hanna Hult", Phone = "0701234567", Address = "Examplegatan 1" },
+                    new Customer { Email = "kevin@example.com", Name = "Kevin Selin", Phone = "0702345678", Address = "Examplegatan 2" }
+                );
+            }
+
+            if (!Products.Any())
+            {
+                Products.AddRange(
+                    new Product { Sku = "GLUE-STICK", Name = "Craft Glue Stick", Price = 19.90m, IsActive = true },
+                    new Product { Sku = "GLITTER-KIT", Name = "Glitter Kit 6-pack", Price = 49.00m, IsActive = true },
+                    new Product { Sku = "PAPER-A4-COLOR", Name = "Coloured A4 Paper Pack", Price = 39.00m, IsActive = true },
+                    new Product { Sku = "BEADS-MIX", Name = "Mixed Beads 200g", Price = 59.00m, IsActive = true },
+                    new Product { Sku = "PAINT-SET", Name = "Acrylic Paint Set 12pcs", Price = 129.00m, IsActive = true },
+                    new Product { Sku = "BRUSH-SET", Name = "Fine Brush Set 6pcs", Price = 79.00m, IsActive = true },
+                    new Product { Sku = "SCISSORS-KIDS", Name = "Safety Scissors for Kids", Price = 29.90m, IsActive = true }
+                );
+            }
+
+                await SaveChangesAsync();
+        }
         protected override void OnModelCreating(ModelBuilder b)
         {
             b.Entity<Product>().HasIndex(x => x.Sku).IsUnique();
@@ -47,21 +84,6 @@ namespace IT.CraftOrders.Data
                 .HasOne(ol => ol.Product)
                 .WithMany(p => p.OrderLines)
                 .HasForeignKey(ol => ol.ProductId);
-
-            b.Entity<Product>().HasData(
-                new Product { ProductId = 1, Sku = "GLUE-STICK", Name = "Craft Glue Stick", Price = 19.90m, IsActive = true },
-                new Product { ProductId = 2, Sku = "GLITTER-KIT", Name = "Glitter Kit 6-pack", Price = 49.00m, IsActive = true },
-                new Product { ProductId = 3, Sku = "PAPER-A4-COLOR", Name = "Coloured A4 Paper Pack", Price = 39.00m, IsActive = true },
-                new Product { ProductId = 4, Sku = "BEADS-MIX", Name = "Mixed Beads 200g", Price = 59.00m, IsActive = true },
-                new Product { ProductId = 5, Sku = "PAINT-SET", Name = "Acrylic Paint Set 12pcs", Price = 129.00m, IsActive = true },
-                new Product { ProductId = 6, Sku = "BRUSH-SET", Name = "Fine Brush Set 6pcs", Price = 79.00m, IsActive = true },
-                new Product { ProductId = 7, Sku = "SCISSORS-KIDS", Name = "Safety Scissors for Kids", Price = 29.90m, IsActive = true }
-            );
-
-            b.Entity<Customer>().HasData(
-                new Customer { CustomerId = 1, Email = "hanna@example.com", Name = "Hanna Hult", Phone = "0701234567", Address = "Examplegatan 1" },
-                new Customer { CustomerId = 2, Email = "kevin@example.com", Name = "Kevin Selin", Phone = "0702345678", Address = "Examplegatan 2" }
-            );
-        } 
+        }
     }
 }

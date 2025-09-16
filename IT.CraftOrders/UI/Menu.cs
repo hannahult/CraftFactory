@@ -13,15 +13,20 @@ namespace IT.CraftOrders.UI
     {
         private readonly ProductService _productService;
         private readonly OrderService _orderService;
+        private Employee? _currentUser = null;
+        private readonly AuthService _authService;
 
-        public Menu(ProductService productService, OrderService orderService)
+        public Menu(ProductService productService, OrderService orderService, AuthService authService)
         {
             _productService = productService;
-            _orderService = orderService;  
+            _orderService = orderService;
+            _authService = authService;
         }
 
         public async Task RunAsync()
         {
+            await LoginAsync();
+
             while (true)
             {
                 Console.Clear();
@@ -30,18 +35,40 @@ namespace IT.CraftOrders.UI
                 Console.WriteLine("2. View Products");
                 Console.WriteLine("3. Add Order");
                 Console.WriteLine("0. Exit");
+                Console.WriteLine("9. Logout");
                 Console.Write("Select an option: ");
                 var choice = Console.ReadLine();
                 switch (choice)
                 {
                     case "1":
+
+                        if (_currentUser == null)
+                        {
+                            Console.WriteLine("Please login first.");
+                            Pause();
+                            break;
+                        }
+
                         await ViewOrdersAsync();
                         break;
+
                     case "2":
                         await ViewProductsAsync();
                         break;
                     case "3":
+
+                        if (_currentUser == null)
+                        {
+                            Console.WriteLine("Please login first.");
+                            Pause();
+                            break;
+                        }
+
                         await AddOrderAsync();
+                        break;
+                    case "9":
+                        _currentUser = null;
+                        await LoginAsync();
                         break;
                     case "0":
                         return;
@@ -53,11 +80,45 @@ namespace IT.CraftOrders.UI
             }
         }
 
+        private async Task LoginAsync()
+        {
+            while (_currentUser == null)
+            {
+                Console.Clear();
+                Console.WriteLine("=== Employee Login ===");
+                Console.WriteLine("Login as Employee = E or Continue as guest = G");
+                var userType = (Console.ReadLine() ?? "").Trim().ToUpper();
+
+                if (userType == "G")
+                {
+                    Console.WriteLine("Continuing as guest. Some features may be restricted.");
+                    Pause();
+                    return;
+                }
+
+                Console.Write("Email: ");
+                var email = (Console.ReadLine() ?? "").Trim();
+                Console.Write("Password: ");
+                var password = (Console.ReadLine() ?? "").Trim();
+
+                _currentUser = await _authService.LoginAsync(email, password);
+
+                if (_currentUser == null)
+                {
+                    Console.WriteLine("Invalid credentials. Press any key to try again...");
+                    Console.ReadKey();
+                }
+            }
+            Console.WriteLine($"Welcome, {_currentUser.Email}!");
+            Pause();
+        }
+
         private async Task ViewOrdersAsync()
         {
             Console.Clear();
             var orders = await _orderService.GetLatestAsync();
-            Console.Clear();
+            //Console.Clear();
+            Console.WriteLine($"(debug) fetched {orders.Count} orders from DB");
             foreach (var o in orders)
             {
                 Console.WriteLine($"Order {o.OrderId} | {o.Customer?.Name} | {o.Status}");
@@ -68,6 +129,7 @@ namespace IT.CraftOrders.UI
         }
 
         private async Task AddOrderAsync()
+
         {
             var products = await _productService.GetAllProductsAsync();
             if (products.Count == 0)
@@ -82,12 +144,12 @@ namespace IT.CraftOrders.UI
             while (true)
             {
                 Console.Clear();
-                Console.WriteLine("=====Create Order for CustomerId 1=====");
+                Console.WriteLine("=====Create Order=====");
                 Console.WriteLine("Available products:");
                 foreach (var p in products)
                     Console.WriteLine($"{p.ProductId}. {p.Name} ({p.Sku}) - {p.Price:C}");
 
-                Console.Write("\nVal (ID / 0 = Done / R = Regret / C = Cancel): ");
+                Console.Write("\nChoice (ID / 0 = Done / R = Regret / C = Cancel): ");
                 var pick = (Console.ReadLine() ?? "").Trim();
 
                 if (string.Equals(pick, "C", StringComparison.OrdinalIgnoreCase))
@@ -127,10 +189,14 @@ namespace IT.CraftOrders.UI
                         return;
                     }
 
-                    // Bekräfta ordern
+                    int customerId = 3; // default customer
+
+
+                    // Order comfirmation
                     Console.Clear();
                     Console.WriteLine("\n=== Order summary ===");
                     var total = PrintCartSummary(lines, products);
+                    Console.Write($"For customer {customerId}");
 
                     Console.Write($"Save order (total {total:C})? (Y/N): ");
                     var confirm = (Console.ReadLine() ?? "").Trim();
@@ -141,7 +207,7 @@ namespace IT.CraftOrders.UI
                         return;
                     }
 
-                    var order = await _orderService.CreateAsync(customerId: 1, lines: lines);
+                    var order = await _orderService.CreateAsync(customerId, lines: lines);
                     Console.Clear();
                     Console.WriteLine($"\nOrder created: {order.OrderId}");
                     Pause();
