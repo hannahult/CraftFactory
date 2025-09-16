@@ -15,12 +15,14 @@ namespace IT.CraftOrders.UI
         private readonly OrderService _orderService;
         private Employee? _currentUser = null;
         private readonly AuthService _authService;
+        private readonly CustomerService _customerService;
 
-        public Menu(ProductService productService, OrderService orderService, AuthService authService)
+        public Menu(ProductService productService, OrderService orderService, AuthService authService, CustomerService customerService)
         {
             _productService = productService;
             _orderService = orderService;
             _authService = authService;
+            _customerService = customerService;
         }
 
         public async Task RunAsync()
@@ -189,14 +191,33 @@ namespace IT.CraftOrders.UI
                         return;
                     }
 
-                    int customerId = 3; // default customer
+                    Customer? customer = null;
+                    int customerId = 0;
 
+                    while (customer == null)
+                    {
+                        Console.WriteLine("Enter CustomerId:");
+                        var inputId = Console.ReadLine();
+
+                        if (!int.TryParse(inputId, out customerId) || customerId <= 0)
+                        {
+                            Console.WriteLine("Invalid input. Try again...");
+                            continue;
+                        }
+
+                        customer = await _customerService.GetCustomerByIdAsync(customerId);
+                        if (customer == null)
+                        {
+                            Console.WriteLine("Customer not found. Try again...");
+                            continue;
+                        }
+                    }
 
                     // Order comfirmation
                     Console.Clear();
                     Console.WriteLine("\n=== Order summary ===");
                     var total = PrintCartSummary(lines, products);
-                    Console.Write($"For customer {customerId}");
+                    Console.Write($"For customer {customer.Name}");
 
                     Console.Write($"Save order (total {total:C})? (Y/N): ");
                     var confirm = (Console.ReadLine() ?? "").Trim();

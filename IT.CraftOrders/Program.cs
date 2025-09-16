@@ -37,6 +37,7 @@ namespace IT.CraftOrders
                  services.AddScoped<OrderService>();
                  services.AddScoped<AuthService>();
                  services.AddScoped<IncidentService>();
+                 services.AddScoped<CustomerService>();
                  services.AddScoped<Menu>();
              });
     }
