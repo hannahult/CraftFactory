@@ -120,17 +120,5 @@ namespace OT.RobotArmSim
                 Console.WriteLine(ex.StackTrace);
             }
         }
-
-        static async Task CreateIncidentAsync(Guid? orderId, string code, string severity, string message)
-        {
-            using var http = new HttpClient(new HttpClientHandler
-            {
-                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-            })
-            { BaseAddress = new Uri("https://localhost:7246") };
-
-            var payload = new { OrderId = orderId, Code = code, Severity = severity, Message = message };
-            await http.PostAsJsonAsync("/api/v1/incidents", payload);
-        }
     }
 }

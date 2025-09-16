@@ -25,7 +25,17 @@ namespace Integration.DataBridge
 
             EasyModbus.ModbusClient
             modbusClient = new EasyModbus.ModbusClient("127.0.0.1", 502); 
-            modbusClient.Connect();
+            try 
+            {
+                modbusClient.Connect();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Modbus connection error: {ex.Message}");
+                await CreateIncidentAsync(http, null, "OT_UNREACHABLE", "Error", $"Could not connect to OT: {ex.Message}");
+                return;
+            }
+
 
             while (true)
             {
