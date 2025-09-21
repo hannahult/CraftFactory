@@ -20,25 +20,13 @@ namespace Integration.DataBridge
             {
                 ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
             };
-            using var http = new HttpClient(handler) { BaseAddress = new Uri("https://localhost:7246") };
+            using var http = new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8246") };
             var json = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-
-            EasyModbus.ModbusClient
-            modbusClient = new EasyModbus.ModbusClient("127.0.0.1", 502); 
-            try 
-            {
-                modbusClient.Connect();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Modbus connection error: {ex.Message}");
-                await CreateIncidentAsync(http, null, "OT_UNREACHABLE", "Error", $"Could not connect to OT: {ex.Message}");
-                return;
-            }
 
 
             while (true)
             {
+               
                 try
                 {
                     // Catching orders with status "InProgress" and setting them back to "New"
@@ -58,7 +46,6 @@ namespace Integration.DataBridge
                         catch {  }
                     }
 
-
                     var news = await http.GetFromJsonAsync<OrderSummaryDto[]>(
                         string.Format("/api/v1/orders?status={0}&take=100", "New"), json
                     ) ?? Array.Empty<OrderSummaryDto>();
@@ -68,11 +55,24 @@ namespace Integration.DataBridge
                         Thread.Sleep(1000);
                         continue;
                     }
-
+                    
                     foreach (var order in news)
                     {
                         try
                         {
+                            EasyModbus.ModbusClient
+                            modbusClient = new EasyModbus.ModbusClient("127.0.0.1", 502);
+                            try
+                            {
+                                modbusClient.Connect();
+                            }
+                            catch (Exception ex)
+                            {
+                                await UpdateStatusAsync(http, order.OrderId, "Failed");
+                                await CreateIncidentAsync(http, order.OrderId, "OT_UNREACHABLE", "Error", $"Could not connect to OT: {ex.Message}");
+                                continue;
+                            }
+
 
                             await UpdateStatusAsync(http, order.OrderId, "InProgress");
 
@@ -84,6 +84,7 @@ namespace Integration.DataBridge
                             modbusClient.WriteSingleCoil(0, true);
 
                             await UpdateStatusAsync(http, order.OrderId, "Completed");
+                            Console.WriteLine($"Completed {order.OrderId} (code={orderCode})");
                         }
                         catch (Exception exOrder)
                         {
@@ -103,6 +104,7 @@ namespace Integration.DataBridge
                 catch (Exception ex)
                 {
                     Console.WriteLine($"ERROR: {ex.Message}");
+                    await CreateIncidentAsync(http, null, "API_FAIL", "Error", ex.Message);              
                 }
 
                 Thread.Sleep(2000); 
@@ -131,8 +133,16 @@ namespace Integration.DataBridge
         static async Task CreateIncidentAsync(HttpClient http, Guid? orderId, string code, string severity, string message)
         {
             var payload = new { OrderId = orderId, Code = code, Severity = severity, Message = message };
-            var resp = await http.PostAsJsonAsync("/api/v1/incidents", payload);
-            resp.EnsureSuccessStatusCode();
+            try
+            {
+                var resp = await http.PostAsJsonAsync("/api/v1/incidents", payload);
+                resp.EnsureSuccessStatusCode();
+            }
+            catch (Exception ex)
+            {
+                
+            }
+
         }
 
     }

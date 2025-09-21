@@ -16,13 +16,15 @@ namespace IT.CraftOrders.UI
         private Employee? _currentUser = null;
         private readonly AuthService _authService;
         private readonly CustomerService _customerService;
+        private readonly IncidentService _incidentService;
 
-        public Menu(ProductService productService, OrderService orderService, AuthService authService, CustomerService customerService)
+        public Menu(ProductService productService, OrderService orderService, AuthService authService, CustomerService customerService, IncidentService incidentService)
         {
             _productService = productService;
             _orderService = orderService;
             _authService = authService;
             _customerService = customerService;
+            _incidentService = incidentService;
         }
 
         public async Task RunAsync()
@@ -107,7 +109,9 @@ namespace IT.CraftOrders.UI
 
                 if (_currentUser == null)
                 {
+
                     Console.WriteLine("Invalid credentials. Press any key to try again...");
+                    await _incidentService.CreateAsync(null, "FAILED_LOGIN", "Warning", "Attempted login failed, be aware");
                     Console.ReadKey();
                 }
             }
