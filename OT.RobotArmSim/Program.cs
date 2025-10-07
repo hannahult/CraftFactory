@@ -84,7 +84,7 @@ namespace OT.RobotArmSim
                 for (int i = 0; i < numberOfRegisters; i++)
                 {
                     int address = startAddress + i;
-                    if (address >= 0 && address <= maxRegisterAddress) // Ensure we don't go out of bounds
+                    if (address >= 0 && address <= maxRegisterAddress) 
                     {
                         Console.WriteLine($"    HoldingRegister[{address}] changed to: {modbusServer.holdingRegisters[address]}");
                     }

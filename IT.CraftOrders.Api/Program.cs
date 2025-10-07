@@ -22,10 +22,11 @@ namespace IT.CraftOrders.Api
 
             app.UseHttpsRedirection();
 
+            //API group for base URL /api/v1
             var api = app.MapGroup("/api/v1");
 
             // PRODUCTS
-            //get all products
+            //Get all products
             api.MapGet("/products", async (ProductService products) =>
             {
                 var list = await products.GetAllProductsAsync();
@@ -34,7 +35,7 @@ namespace IT.CraftOrders.Api
             });
 
             // ORDERS
-            //create new order
+            //Create new order
             api.MapPost("/orders", async (OrderCreateDto req, OrderService orders) =>
             {
                 if (req.Lines is null || req.Lines.Count == 0)
@@ -43,7 +44,6 @@ namespace IT.CraftOrders.Api
                 if (req.Lines.Any(l => l.Quantity <= 0))
                     return Results.BadRequest("Quantity must be > 0.");
 
-                // Service sköter produktvalidering via DB (du kan utöka där)
                 var lines = req.Lines.Select(l => (l.ProductId, l.Quantity));
                 var order = await orders.CreateAsync(req.CustomerId, lines);
 
@@ -51,7 +51,7 @@ namespace IT.CraftOrders.Api
                 return Results.Created($"/api/v1/orders/{order.OrderId}", dto);
             });
 
-            //get orders
+            //Get orders
             api.MapGet("/orders", async (string? status, int? take, CraftFactoryDbContext db) =>
             {
                 var q = db.Orders.AsQueryable();
@@ -64,7 +64,7 @@ namespace IT.CraftOrders.Api
                 return Results.Ok(list);
             });
 
-            //get order by id
+            //Get order by id
             api.MapGet("/orders/{id:guid}", async (Guid id, CraftFactoryDbContext db) =>
             {
                 var o = await db.Orders
@@ -83,9 +83,10 @@ namespace IT.CraftOrders.Api
                 return Results.Ok(dto);
             });
 
-            //update order status
+            //Update order status
             api.MapPut("/orders/{id:guid}/status", async (Guid id, UpdateOrderStatusDto req, OrderService orders) =>
             {
+                //Simple validation of allowed statuses
                 var allowed = new[] { "New", "InProgress", "Completed", "Failed", "Cancelled" };
                 if (!allowed.Contains(req.Status)) return Results.BadRequest("Invalid status.");
 
@@ -101,7 +102,7 @@ namespace IT.CraftOrders.Api
             });
 
             // INCIDENTS
-            //log new incident
+            //Log new incident
             api.MapPost("/incidents", async (IncidentCreateDto req, CraftFactoryDbContext db) =>
             {
                 var incident = new Incident

@@ -23,6 +23,8 @@ namespace IT.CraftOrders.Services
             var user = _db.Employees.FirstOrDefault(u => u.Email == email);
             if (user == null) return null;
             bool verified = BCrypt.Net.BCrypt.Verify(password, user.PasswordHash);
+
+            // Log failed login attempt
             if (!verified)
             {
                 await _incidentService.CreateAsync(null,"LOGIN_FAIL","Warning","Attempted login failed");
@@ -34,8 +36,5 @@ namespace IT.CraftOrders.Services
 
             return user;
         }
-
-
-
     }
 }

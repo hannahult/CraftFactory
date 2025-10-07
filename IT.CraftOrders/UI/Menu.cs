@@ -45,7 +45,8 @@ namespace IT.CraftOrders.UI
                 switch (choice)
                 {
                     case "1":
-
+                        //View orders
+                        //Only for logged in employees
                         if (_currentUser == null)
                         {
                             Console.WriteLine("Please login first.");
@@ -57,10 +58,12 @@ namespace IT.CraftOrders.UI
                         break;
 
                     case "2":
+                        //View products
                         await ViewProductsAsync();
                         break;
                     case "3":
-
+                        //Add order
+                        //Only for logged in employees
                         if (_currentUser == null)
                         {
                             Console.WriteLine("Please login first.");
@@ -71,6 +74,7 @@ namespace IT.CraftOrders.UI
                         await AddOrderAsync();
                         break;
                     case "9":
+                        //Logout
                         _currentUser = null;
                         await LoginAsync();
                         break;
@@ -84,6 +88,7 @@ namespace IT.CraftOrders.UI
             }
         }
 
+        //Login 
         private async Task LoginAsync()
         {
             while (_currentUser == null)
@@ -93,6 +98,7 @@ namespace IT.CraftOrders.UI
                 Console.WriteLine("Login as Employee = E or Continue as guest = G");
                 var userType = (Console.ReadLine() ?? "").Trim().ToUpper();
 
+                //Guest access
                 if (userType == "G")
                 {
                     Console.WriteLine("Continuing as guest. Some features may be restricted.");
@@ -100,6 +106,7 @@ namespace IT.CraftOrders.UI
                     return;
                 }
 
+                //Employee login
                 Console.Write("Email: ");
                 var email = (Console.ReadLine() ?? "").Trim();
                 Console.Write("Password: ");
@@ -107,6 +114,7 @@ namespace IT.CraftOrders.UI
 
                 _currentUser = await _authService.LoginAsync(email, password);
 
+                //Failed login
                 if (_currentUser == null)
                 {
 
@@ -119,12 +127,12 @@ namespace IT.CraftOrders.UI
             Pause();
         }
 
+        //View latest orders
         private async Task ViewOrdersAsync()
         {
             Console.Clear();
             var orders = await _orderService.GetLatestAsync();
-            //Console.Clear();
-            Console.WriteLine($"(debug) fetched {orders.Count} orders from DB");
+            Console.Clear();
             foreach (var o in orders)
             {
                 Console.WriteLine($"Order {o.OrderId} | {o.Customer?.Name} | {o.Status}");
@@ -134,9 +142,11 @@ namespace IT.CraftOrders.UI
             Pause();
         }
 
+        //Add new order
         private async Task AddOrderAsync()
 
         {
+            //Fetch products
             var products = await _productService.GetAllProductsAsync();
             if (products.Count == 0)
             {
@@ -149,6 +159,8 @@ namespace IT.CraftOrders.UI
 
             while (true)
             {
+
+                //Create order menu
                 Console.Clear();
                 Console.WriteLine("=====Create Order=====");
                 Console.WriteLine("Available products:");
@@ -158,14 +170,16 @@ namespace IT.CraftOrders.UI
                 Console.Write("\nChoice (ID / 0 = Done / R = Regret / C = Cancel): ");
                 var pick = (Console.ReadLine() ?? "").Trim();
 
-                if (string.Equals(pick, "C", StringComparison.OrdinalIgnoreCase))
+                //Cancel order
+                if (string.Equals(pick, "C", StringComparison.OrdinalIgnoreCase)) 
                 {
                     Console.WriteLine("Cancelled. No order created.");
                     Pause();
                     return;
                 }
 
-                if (string.Equals(pick, "R", StringComparison.OrdinalIgnoreCase))
+                //Regret last line
+                if (string.Equals(pick, "R", StringComparison.OrdinalIgnoreCase)) 
                 {
                     if (lines.Count > 0)
                     {
@@ -180,13 +194,15 @@ namespace IT.CraftOrders.UI
                     continue;
                 }
 
+                //Parse product ID
                 if (!int.TryParse(pick, out int productId))
                 {
                     Console.WriteLine("Invalid choice, try igain.");
                     continue;
                 }
 
-                if (productId == 0) // klar
+                //Done
+                if (productId == 0) 
                 {
                     if (lines.Count == 0)
                     {
@@ -195,9 +211,9 @@ namespace IT.CraftOrders.UI
                         return;
                     }
 
+                    //Get customer
                     Customer? customer = null;
-                    int customerId = 0;
-
+                    int customerId = 0;           
                     while (customer == null)
                     {
                         Console.WriteLine("Enter CustomerId:");
@@ -217,14 +233,17 @@ namespace IT.CraftOrders.UI
                         }
                     }
 
-                    // Order comfirmation
+                    //Order comfirmation
                     Console.Clear();
                     Console.WriteLine("\n=== Order summary ===");
                     var total = PrintCartSummary(lines, products);
                     Console.Write($"For customer {customer.Name}");
 
+                    //Confirm
                     Console.Write($"Save order (total {total:C})? (Y/N): ");
                     var confirm = (Console.ReadLine() ?? "").Trim();
+
+                    //Not confirmed
                     if (!confirm.Equals("Y", StringComparison.OrdinalIgnoreCase))
                     {
                         Console.WriteLine("Cancelled. No order created.");
@@ -239,13 +258,17 @@ namespace IT.CraftOrders.UI
                     return;
                 }
 
+                //Add product line
                 var prod = products.FirstOrDefault(p => p.ProductId == productId);
+
+                //Validate product
                 if (prod == null)
                 {
                     Console.WriteLine("Invalid product-ID.");
                     continue;
                 }
 
+                //Get quantity
                 Console.Write($"Quantity for {prod.Name}: ");
                 if (!int.TryParse(Console.ReadLine(), out int qty) || qty <= 0)
                 {
@@ -253,6 +276,7 @@ namespace IT.CraftOrders.UI
                     continue;
                 }
 
+                //Add line
                 lines.Add((productId, qty));
                 Console.WriteLine($"Added: {prod.Name} x{qty}");
                 PrintCartSummary(lines, products);

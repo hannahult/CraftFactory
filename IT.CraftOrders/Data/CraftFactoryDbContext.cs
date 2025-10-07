@@ -33,7 +33,9 @@ namespace IT.CraftOrders.Data
                 optionsBuilder.UseSqlServer(config.GetConnectionString("DefaultConnection"));
             }
         }
-        
+
+
+        //Seed initial data
         public async Task InitializeDataAsync()
         {
             if (!Employees.Any())
